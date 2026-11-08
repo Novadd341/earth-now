@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>此刻的地球</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;background:#02040a;overflow:hidden;
+ font-family:-apple-system,'PingFang SC','Noto Sans CJK SC',sans-serif;
+ -webkit-tap-highlight-color:transparent;touch-action:none}
+#c{display:block;width:100%;height:100%}
+#top{position:fixed;left:16px;top:16px;color:#40607a;font-size:11px;letter-spacing:1.5px}
+#bot{position:fixed;left:16px;bottom:18px;color:#3d5b73;font-size:11px;line-height:1.9;letter-spacing:.5px}
+#bot b{color:#a8cde6;font-weight:500;letter-spacing:1px}
+#info{position:fixed;right:14px;top:14px;min-width:126px;padding:11px 14px;
+ border:1px solid rgba(90,150,190,.26);border-radius:11px;background:rgba(5,13,23,.74);
+ color:#cfe6f5;font-size:12px;line-height:1.75;letter-spacing:.5px;
+ opacity:0;transform:translateY(-4px);transition:opacity .28s,transform .28s;pointer-events:none}
+#info.on{opacity:1;transform:translateY(0)}
+#info .nm{font-size:16px;color:#79e0c6;letter-spacing:1.2px;margin-bottom:2px}
+#info .nm.en{font-size:13px;color:#5f96b4;letter-spacing:.4px}
+#info .cd{color:#5a7c93;font-size:11px}
+#panel{position:fixed;left:10px;right:10px;bottom:10px;max-height:42vh;display:none;
+ flex-direction:column;padding:12px 14px 10px;border-radius:14px;
+ border:1px solid rgba(90,150,190,.22);background:rgba(4,11,20,.9);
+ color:#cfe6f5;font-size:13px;backdrop-filter:blur(8px);z-index:10}
+#panel.on{display:flex}
+#panel .ph{display:flex;align-items:center;margin-bottom:6px}
+#panel .ph b{color:#79e0c6;font-size:15px;font-weight:500;letter-spacing:1.2px}
+#panel .ph em{font-style:normal;color:#4e7189;font-size:11px;margin-left:8px;flex:1}
+#panel .cls{color:#54748c;font-size:20px;line-height:1;padding:0 4px}
+#panel .ls{overflow-y:auto;-webkit-overflow-scrolling:touch;flex:1}
+#panel .row{padding:10px 2px;border-bottom:1px solid rgba(70,110,140,.13);
+ display:flex;justify-content:space-between;align-items:center}
+#panel .row:last-child{border-bottom:none}
+#panel .row i{font-style:normal;color:#4e7189;font-size:11px}
+#panel .shot{width:100%;max-height:calc(42vh - 104px);object-fit:contain;border-radius:10px;display:block;background:#08131f}
+#panel .cap{font-size:11px;color:#5a7c93;margin-top:7px;line-height:1.65}
+#panel .back{color:#79e0c6;font-size:12px;margin-bottom:7px}
+#panel .tb{display:flex;gap:7px;margin:0 0 8px}
+#panel .tb span{font-size:11px;padding:3px 11px;border-radius:20px;border:1px solid rgba(90,150,190,.22);color:#5c8299;letter-spacing:.5px}
+#panel .tb span.on{background:rgba(121,224,198,.13);border-color:rgba(121,224,198,.45);color:#79e0c6}
+#mist{position:fixed;left:0;top:0;right:0;bottom:0;pointer-events:none;z-index:2;mix-blend-mode:screen;
+ background:radial-gradient(circle at 50% 50%,rgba(80,150,230,.062) 0%,rgba(60,120,200,.026) 30%,rgba(36,86,152,.008) 52%,rgba(0,0,0,0) 70%)}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas><div id="mist"></div>
+<div id="top">LIVE EARTH</div>
+<div id="info"><div class="nm"></div><div class="cd"></div></div>
+<div id="panel"><div class="ph"><b></b><em></em><div class="cls">×</div></div><div class="tb"><span data-k="a" class="on">全部</span><span data-k="n">自然</span><span data-k="c">城市</span></div><div class="ls"></div></div>
+<div id="bot"><b>----</b>　无云底图<br>点一下地球 · 拖动旋转 · 双指缩放</div>
+<script>__THREE__</script>
+<script>
+var IMG='data:image/jpeg;base64,__IMG__';
+var GEO=JSON.parse(__GEO_JSON__);
+var CAM=JSON.parse(__CAM__);
+var ZN={'中华人民共和国':'中国','中华民国':'中国','W. Sahara':'西撒哈拉'};
+var MERGE={'中华民国':'中华人民共和国'};
+function regionKey(z){ return MERGE[z]||z; }
+
+var scene=new THREE.Scene();
+var cam=new THREE.PerspectiveCamera(38,innerWidth/innerHeight,0.1,100);
+cam.position.z=3.15;
+var renderer=new THREE.WebGLRenderer({canvas:document.getElementById('c'),antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.outputEncoding=THREE.sRGBEncoding;
+
+var tex=new THREE.TextureLoader().load(IMG);
+tex.anisotropy=renderer.capabilities.getMaxAnisotropy();
+
+var evs='varying vec2 vUv;varying vec3 vN;varying vec3 vP;void main(){vUv=uv;vN=normalize(normalMatrix*normal);vec4 mv=modelViewMatrix*vec4(position,1.0);vP=mv.xyz;gl_Position=projectionMatrix*mv;}';
+var efs='uniform sampler2D map;uniform vec3 ld;varying vec2 vUv;varying vec3 vN;varying vec3 vP;'
+ +'void main(){'
+ +'vec3 base=texture2D(map,vUv).rgb;'
+ +'base=clamp((base-0.5)*1.10+0.5,0.0,1.0);'
+ +'vec3 n=normalize(vN);vec3 v=normalize(-vP);vec3 L=normalize(ld);'
+ +'float diff=max(dot(n,L),0.0);'
+ +'float shade=0.70+0.48*diff;'
+ +'float ndv=clamp(dot(n,v),0.0,1.0);'
+ +'float limb=pow(ndv,0.30);'
+ +'float dark=mix(0.50,1.0,limb);'
+ +'vec3 c=base*shade*dark;'
+ +'vec3 hh=normalize(L+v);'
+ +'float sp=pow(max(dot(n,hh),0.0),96.0)*0.10;'
+ +'c+=vec3(0.72,0.84,1.0)*sp;'
+ +'float rim=pow(1.0-ndv,2.6);'
+ +'float deep=pow(1.0-ndv,5.5);'
+ +'vec3 atm=mix(vec3(0.20,0.46,0.92),vec3(0.80,0.93,1.0),deep);'
+ +'c=c*(1.0-0.28*rim)+atm*rim*0.78*(0.55+0.45*diff);'
+ +'gl_FragColor=vec4(c,1.0);}';
+
+var earth=new THREE.Mesh(
+  new THREE.SphereGeometry(1,192,128),
+  new THREE.ShaderMaterial({
+    uniforms:{map:{value:tex},ld:{value:new THREE.Vector3(-0.62,0.42,0.66).normalize()}},
+    vertexShader:evs,fragmentShader:efs
+  })
+);
+earth.rotation.y=-1.9;
+scene.add(earth);
+
+var fres='varying vec3 vN;varying vec3 vP;void main(){vN=normalize(normalMatrix*normal);vec4 mv=modelViewMatrix*vec4(position,1.0);vP=mv.xyz;gl_Position=projectionMatrix*mv;}';
+var fresF='uniform vec3 c;uniform float pw;uniform float k;varying vec3 vN;varying vec3 vP;void main(){float f=pow(1.0-abs(dot(normalize(vN),normalize(-vP))),pw);gl_FragColor=vec4(c,f*k);}';
+
+var hF='uniform vec3 cIn;uniform vec3 cOut;uniform vec3 ld;uniform float k;varying vec3 vN;varying vec3 vP;'
+ +'void main(){'
+ +'vec3 n=normalize(vN);vec3 v=normalize(-vP);'
+ +'float f=1.0-abs(dot(n,v));'
+ +'float p=pow(f,4.2);'
+ +'float g=pow(f,11.0);'
+ +'vec3 col=mix(cOut,cIn,g);'
+ +'float sun=0.48+0.52*max(dot(n,normalize(ld)),0.0);'
+ +'gl_FragColor=vec4(col,p*k*sun);}';
+
+
+
+var g=new THREE.BufferGeometry(),pos=[];
+for(var i=0;i<1800;i++){
+  var r=14+Math.random()*22,th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1);
+  pos.push(r*Math.sin(ph)*Math.cos(th),r*Math.sin(ph)*Math.sin(th),r*Math.cos(ph));
+}
+g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+scene.add(new THREE.Points(g,new THREE.PointsMaterial({color:0xc8ddf0,size:0.04,sizeAttenuation:true,transparent:true,opacity:0.75})));
+
+var g2=new THREE.BufferGeometry(),pos2=[];
+for(var i=0;i<220;i++){
+  var r=16+Math.random()*20,th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1);
+  pos2.push(r*Math.sin(ph)*Math.cos(th),r*Math.sin(ph)*Math.sin(th),r*Math.cos(ph));
+}
+g2.setAttribute('position',new THREE.Float32BufferAttribute(pos2,3));
+scene.add(new THREE.Points(g2,new THREE.PointsMaterial({color:0xffffff,size:0.085,sizeAttenuation:true,transparent:true,opacity:0.9})));
+
+scene.add(new THREE.AmbientLight(0xffffff,0.78));
+var dl=new THREE.DirectionalLight(0xffffff,0.62); dl.position.set(-4.5,2.0,2.6); scene.add(dl);
+var dl2=new THREE.DirectionalLight(0x6f9bd0,0.22); dl2.position.set(4,-2.4,-3); scene.add(dl2);
+
+var drag=false,lx=0,ly=0,vy=0,vx=0,spin=0.0011;
+var tSc=1,tUp=0;
+
+function llVec(lon,lat,r){
+  var vv=(lat+90)/180, t=(1-vv)*Math.PI, p=(lon+180)/360*Math.PI*2;
+  return new THREE.Vector3(-Math.cos(p)*Math.sin(t),-Math.cos(vv*Math.PI),Math.sin(p)*Math.sin(t)).multiplyScalar(r);
+}
+function inRing(lon,lat,ring){
+  var c=false;
+  for(var i=0,j=ring.length-1;i<ring.length;j=i++){
+    var xi=ring[i][0],yi=ring[i][1],xj=ring[j][0],yj=ring[j][1];
+    if(((yi>lat)!=(yj>lat))&&(lon<(xj-xi)*(lat-yi)/(yj-yi)+xi)) c=!c;
+  }
+  return c;
+}
+function findCountry(lon,lat){
+  for(var k=0;k<GEO.length;k++){
+    var cs=GEO[k].c;
+    for(var m=0;m<cs.length;m++){
+      var poly=cs[m];
+      if(poly.length&&inRing(lon,lat,poly[0])){
+        var ok=true;
+        for(var h=1;h<poly.length;h++){ if(inRing(lon,lat,poly[h])){ok=false;break;} }
+        if(ok) return GEO[k];
+      }
+    }
+  }
+  return null;
+}
+
+var ray=new THREE.Raycaster();
+var gGroup=null,marker=null;
+
+function clearPick(){
+  if(gGroup){ earth.remove(gGroup); gGroup=null; }
+  if(marker){ earth.remove(marker); marker=null; }
+}
+function drawRegion(key){
+  var grp=new THREE.Group();
+  var mat=new THREE.LineBasicMaterial({color:0x54e0c8,transparent:true,opacity:0.95});
+  var main=null;
+  for(var i=0;i<GEO.length;i++){
+    var ct=GEO[i];
+    if(regionKey(ct.z)!==key) continue;
+    if(!main) main=ct;
+    for(var j=0;j<ct.c.length;j++){
+      var poly=ct.c[j];
+      for(var k=0;k<poly.length;k++){
+        var ring=poly[k],arr=[];
+        for(var q=0;q<ring.length;q++){
+          var v=llVec(ring[q][0],ring[q][1],1.005);
+          arr.push(v.x,v.y,v.z);
+        }
+        var gg=new THREE.BufferGeometry();
+        gg.setAttribute('position',new THREE.Float32BufferAttribute(arr,3));
+        grp.add(new THREE.Line(gg,mat));
+      }
+    }
+  }
+  return {group:grp,main:main};
+}
+function fmt(v,p,n){
+  var a=Math.abs(v).toFixed(1);
+  return a+'°'+(v>=0?p:n);
+}
+var infoEl=document.getElementById('info');
+function showInfo(title,en,lon,lat){
+  var nm=infoEl.querySelector('.nm');
+  nm.textContent=title;
+  nm.className='nm'+(title.length>5?' en':'');
+  infoEl.querySelector('.cd').textContent=fmt(lat,'N','S')+'　'+fmt(lon,'E','W');
+  infoEl.className='on';
+}
+
+var pEl=document.getElementById('panel');
+var pB=pEl.querySelector('.ph b');
+var pE=pEl.querySelector('.ph em');
+var pL=pEl.querySelector('.ls');
+var curCo='',curNm='',curList=[],curKind='a';
+function setPanel(v){ pEl.className=v?'on':''; tSc=v?0.66:1; tUp=v?0.40:0; if(!v) spin=0.0011; }
+pEl.querySelector('.cls').onclick=function(){ setPanel(false); };
+var tabs=pEl.querySelectorAll('.tb span');
+for(var t=0;t<tabs.length;t++){ (function(el){ el.onclick=function(){ curKind=el.getAttribute('data-k'); if(curList.length) drawList(); }; })(tabs[t]); }
+
+function renderCountry(iso,zh){
+  curCo=iso; curNm=zh||iso; curList=[]; curKind='a';
+  for(var i=0;i<CAM.length;i++){ if(CAM[i].co===iso) curList.push(CAM[i]); }
+  if(!curList.length){ setPanel(false); return; }
+  pB.textContent=curNm;
+  drawList();
+  setPanel(true);
+}
+
+function drawList(){
+  var list=curList;
+  if(curKind!=='a'){
+    list=[];
+    for(var i=0;i<curList.length;i++){ if(curList[i].k===curKind) list.push(curList[i]); }
+  }
+  var tb=pEl.querySelectorAll('.tb span');
+  for(var q=0;q<tb.length;q++){ tb[q].className=(tb[q].getAttribute('data-k')===curKind)?'on':''; }
+  if(!list.length){ pE.textContent='这里没有这一类机位'; pL.innerHTML=''; return; }
+  var m={};
+  for(var i=0;i<list.length;i++){
+    var k=list[i].c||list[i].r||'其他';
+    if(!m[k]) m[k]=[];
+    m[k].push(list[i]);
+  }
+  var ks=Object.keys(m).sort(function(a,b){return m[b].length-m[a].length;});
+  var nn=0;
+  for(var i=0;i<list.length;i++){ if(list[i].k==='n') nn++; }
+  pE.textContent=list.length+' 个机位'+(curKind==='a'?('，自然 '+nn):'');
+  var h='';
+  for(var j=0;j<ks.length;j++){
+    h+='<div class="row"><div>'+ks[j]+'</div><i>'+m[ks[j]].length+'</i></div>';
+  }
+  pL.innerHTML=h;
+  var rows=pL.querySelectorAll('.row');
+  for(var r=0;r<rows.length;r++){
+    (function(el,key){
+      el.onclick=function(){ renderCity(key,m[key]); };
+    })(rows[r],ks[r]);
+  }
+}
+
+function renderCity(name,list){
+  var one=list[0];
+  pB.textContent=name;
+  pE.textContent=list.length+' 个机位';
+  pL.innerHTML='<div class="back">‹ 返回城市</div><img class="shot" src="'+one.img+'"><div class="cap">'+one.t+'</div>';
+  pL.querySelector('.back').onclick=function(){ renderCountry(curCo,curNm); };
+  setPanel(true);
+}
+
+function doPick(cx,cy){
+  var nd=new THREE.Vector2(cx/innerWidth*2-1,-(cy/innerHeight)*2+1);
+  ray.setFromCamera(nd,cam);
+  var hits=ray.intersectObject(earth,false);
+  if(!hits.length){ clearPick(); infoEl.className=''; spin=0.0011; return; }
+  var lp=earth.worldToLocal(hits[0].point.clone()).normalize();
+  var vv=Math.acos(Math.max(-1,Math.min(1,-lp.y)))/Math.PI;
+  var p=Math.atan2(lp.z,-lp.x); if(p<0) p+=Math.PI*2;
+  var lon=p/(Math.PI*2)*360-180, lat=vv*180-90;
+  clearPick();
+  var ct=findCountry(lon,lat);
+  if(ct){
+    var key=regionKey(ct.z);
+    var rr=drawRegion(key);
+    gGroup=rr.group;
+    earth.add(gGroup);
+    var en=(rr.main&&rr.main.n)||ct.n;
+    var zh=ZN[key]||key;
+    showInfo(zh,en,lon,lat);
+    var iso=(rr.main&&rr.main.a)||ct.a||'';
+    renderCountry(iso,zh);
+  }else{
+    showInfo('海面','',lon,lat);
+    setPanel(false);
+  }
+  marker=new THREE.Mesh(new THREE.SphereGeometry(0.011,10,8),
+    new THREE.MeshBasicMaterial({color:0x7dffd8}));
+  marker.position.copy(llVec(lon,lat,1.012));
+  earth.add(marker);
+  spin=0;
+}
+
+var _sx=0,_sy=0,_st=0;
+function down(x,y){drag=true;lx=x;ly=y;vy=0;vx=0;_sx=x;_sy=y;_st=Date.now();}
+function move(x,y){if(!drag)return;var dx=(x-lx)/innerWidth,dy=(y-ly)/innerHeight;ly=y;lx=x;earth.rotation.y+=dx*2.6;earth.rotation.x+=dy*1.6;vy=dx;vx=dy;}
+function up(x,y){drag=false;if(Math.hypot(x-_sx,y-_sy)<12&&Date.now()-_st<520){doPick(x,y);}}
+c.addEventListener('pointerdown',function(e){down(e.clientX,e.clientY);});
+c.addEventListener('pointermove',function(e){move(e.clientX,e.clientY);});
+window.addEventListener('pointerup',function(e){up(e.clientX,e.clientY);});
+window.addEventListener('pointercancel',function(){drag=false;});
+
+var pd=0,d0=0;
+window.addEventListener('touchstart',function(e){if(e.touches.length===2){drag=false;d0=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);pd=cam.position.z;}},{passive:true});
+window.addEventListener('touchmove',function(e){if(e.touches.length===2){e.preventDefault();var d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);if(d0>0){cam.position.z=Math.min(6,Math.max(1.55,pd*d0/d));}}},{passive:false});
+
+window.addEventListener('resize',function(){cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+
+function tickBot(){
+  var d=new Date();
+  var p=function(n){ return (n<10?'0':'')+n; };
+  document.querySelector('#bot b').textContent=d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());
+}
+tickBot(); setInterval(tickBot,15000);
+
+function loop(){
+  requestAnimationFrame(loop);
+  if(!drag){
+    earth.rotation.y+=vy*0.9+spin;
+    earth.rotation.x+=vx*0.6;
+    vy*=0.955; vx*=0.93;
+    earth.rotation.x=Math.max(-1.2,Math.min(1.2,earth.rotation.x));
+  }
+  var s0=earth.scale.x+(tSc-earth.scale.x)*0.14;
+  earth.scale.setScalar(s0);
+  earth.position.y+=(tUp-earth.position.y)*0.14;
+  renderer.render(scene,cam);
+}
+loop();
+</script>
+</body>
+</html>
