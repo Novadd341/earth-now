@@ -34,7 +34,7 @@ https://novadd341.github.io/earth-now/
 | 工具 | 作用 |
 | --- | --- |
 | `list_countries` | 列出所有国家的机位数和高清数 |
-| `search_by_country` | 按国家码查机位，可只筛高清 |
+| `search_by_country` | 按国家码、中英文国名查机位，可只筛高清；查不到会按城市名兜底 |
 | `search_nearby` | 按经纬度找附近机位，带距离 |
 | `get_cam` | 取单个机位的信息和当前截图地址 |
 
@@ -60,14 +60,24 @@ uv run --with mcp python mcp_server.py
 
 ```json
 {
-  "earth-now": {
+  "earthnow": {
     "command": "uv",
     "args": ["run", "--with", "mcp", "/path/to/earth-now/mcp_server.py"]
   }
 }
 ```
 
-路径要写绝对的。接好之后直接说话就行：
+路径要写绝对的。服务 ID 只用字母、数字、下划线，别带连字符，Operit 会静默不加载。
+
+不走 stdio 也行，起个 HTTP 服务：
+
+```bash
+FASTMCP_HOST=127.0.0.1 FASTMCP_PORT=8000 TRANSPORT=streamable-http python mcp_server.py
+```
+
+然后在客户端里填远程地址 `http://127.0.0.1:8000/mcp`。
+
+接好之后直接说话就行：
 
 - 「奥地利有哪些高清机位」
 - 「东京附近 50 公里内有什么能看的」
