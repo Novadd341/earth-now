@@ -1,0 +1,10 @@
+[project]
+name = "earth-now"
+version = "0.1.0"
+description = "给我一个时间，我给你那一刻的地球云图"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp>=1.2.0",
+    "pillow>=10.0.0",
+]
