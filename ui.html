@@ -31,6 +31,7 @@ html,body{height:100%;background:#02040a;overflow:hidden;
 #panel .ph em{font-style:normal;color:#4e7189;font-size:11px;margin-left:8px;flex:1}
 #panel .cls{color:#54748c;font-size:20px;line-height:1;padding:0 4px}
 #panel .ls{overflow-y:auto;-webkit-overflow-scrolling:touch;flex:1}
+#panel .intro{margin:2px 0 10px;font-size:11.5px;line-height:1.8;color:#8fb0c6;letter-spacing:.2px}
 #panel .row{padding:10px 2px;border-bottom:1px solid rgba(70,110,140,.13);
  display:flex;justify-content:space-between;align-items:center}
 #panel .row:last-child{border-bottom:none}
@@ -211,6 +212,56 @@ function showInfo(title,en,lon,lat){
   infoEl.className='on';
 }
 
+var INTRO={
+"US":"从东岸的纽约到西岸的加州，横跨四个时区。也是机位最多的国家，城市、海岸、沙漠、雪山都有，能往下翻好几页。",
+"GB":"伦敦的桥、苏格兰的高地、威尔士的海岸。天变得快，一年里大半时间画面都是云。",
+"DE":"从南部的阿尔卑斯到北边的波罗的海。德国人爱装摄像头，几乎每个小镇都有一台对着广场。",
+"FR":"巴黎的屋顶、普罗旺斯的田野、布列塔尼的礁石。南部光线最好，傍晚那几小时能看到整片葡萄园转成金色。",
+"IT":"北部的湖、托斯卡纳的丘陵、西西里的海岸。山里和海边差得很远，同一天能看到雪和二十多度的阳光。",
+"ES":"内陆高原干得发白，靠海那一圈绿得发亮。巴塞罗那和瓦伦西亚的港口机位常年在动。",
+"NL":"地势低，天空占了大半画面。鹿特丹的港口和海牙的海边是最常被点开的两处。",
+"AT":"阿尔卑斯穿过整个国家，山里的观景台几乎都对着冰川和雪线。欧洲高清源最多的就是这一带。",
+"CH":"湖、山、雪线，三个词够了。很多机位一年四季都在拍同一座峰，看得出季节怎么走。",
+"PT":"海岸线一路往南，大西洋就在旁边。里斯本的黄墙和南部的悬崖是两种气质。",
+"PL":"平原多，森林密，老城的广场被拍得最多。冬天整片灰，夏天绿得意外。",
+"CZ":"布拉格的屋顶是红瓦，往乡下去就是丘陵和小教堂。机位密度在欧洲算高的。",
+"GR":"白墙蓝顶、石头岛、爱琴海。夏天的光硬，画面里几乎看不到阴影。",
+"NO":"峡湾、雪、极夜。冬天大部分机位只能拍到一片黑，夏天相反，凌晨三点还亮着。",
+"SE":"森林和湖铺满全国，城市反而不多。往北走能看到没有夜的那几个月。",
+"FI":"湖比人多的国家，镜头大多对着水面和林子。冬天拍出来基本只有白和灰两种颜色。",
+"DK":"地势极平，风大，海边常常是灰的。哥本哈根的港口和那些彩色房子最常出现在画面里。",
+"IE":"绿，雨，石头的墙。天气以半小时为单位变化，同一台机位隔一阵看是两幅画。",
+"TR":"一边是地中海的海岸，一边是安纳托利亚的高原。伊斯坦布尔的机位对着海峡，船一直没停过。",
+"RU":"横跨十一个时区，机位密在欧洲那一半。西伯利亚那侧能看到的很少。",
+"IS":"火山、苔原、瀑布，还有几乎每天都在变的天。这里的画面常常比别处更不真实。",
+"CN":"从东海的渔港到西部的雪山。机位多的还是城市，海岸和山区要往下翻。",
+"TW":"中央山脉把岛分成两半，两边天气常常差得远。东岸对着太平洋，机位里看到的浪比人多。",
+"KR":"城市密度高，镜头大多在楼顶和港边。春天有樱，秋天有山。",
+"TH":"南边是海岛和沙滩，北边是山里的雾。曼谷的机位永远在堵车和下雨之间。",
+"SG":"整个国家就是一个城。机位只有一个，对着滨海那片天。",
+"MY":"一边是马六甲海峡的旧城，一边是婆罗洲的雨林。热带的天说变就变，画面里的云几乎不重样。",
+"ID":"一万七千个岛，机位只落在其中几个上。火山和海是这里最常见的两种画面。",
+"VN":"从北部的山到湄公河的三角洲。下龙湾的石头和海上的雾是一对。",
+"PH":"七千多个岛，机位少得意外。海和台风是这个国家的常态。",
+"IN":"北边是雪山，南边是海，中间全是人。机位不多，但能看到的东西跳得很远。",
+"AE":"沙漠里长出来的城市，从空中看全是玻璃和沙。这里暂时没有接入的机位。",
+"SA":"大片沙地和高原，夜里几乎没光。机位还没接上。",
+"HK":"山和海挤在一起，楼从山脚盖到山上。这里的实时画面还没有接进来。",
+"MO":"填海填出来的半岛，赌场和旧街隔几条巷。",
+"IL":"地中海东岸一条窄带，往东就是沙漠。老城和海岸是两种完全不同的景。",
+"EG":"尼罗河是一条绿线，两边全是沙。机位极少，点开能看到那条线的边缘。",
+"ZA":"两个大洋在此交汇，桌山和草原都在这。机位多，晴天的画面很干净。",
+"MA":"老城的巷子是蓝的，往南进山就变成黄土。机位不多。",
+"KE":"赤道穿过国境，草原上是动物和雨季。机位拍到的多是天。",
+"BR":"亚马逊的雨林、南部的欧式小镇、里约的海滩。机位在海岸那侧最多。",
+"AR":"从冰川到草原，南北拉得很长。布宜诺斯艾利斯的机位对着最宽的那条街。",
+"CL":"细细长长一条，东边是安第斯，西边是太平洋。北部的沙漠是地球上最干的地方之一。",
+"MX":"北边是沙漠，南边是雨林，中间高原。城市的画面多。",
+"CA":"从温哥华的海到纽芬兰的岩石。机位多的地方还是人住的地方，北边基本空白。",
+"AU":"海岸一圈有人，中间是干的。机位大多对着海滩和城市的天际线。",
+"NZ":"南岛是山和湖，北岛是火山和草地。这里的画面常常干净得没多余的东西。",
+"JP":"从北海道的雪到冲绳的海，四季都拍得清楚。山里的观景台和海边的小镇都有机位。"
+};
 var pEl=document.getElementById('panel');
 var pB=pEl.querySelector('.ph b');
 var pE=pEl.querySelector('.ph em');
@@ -224,8 +275,13 @@ for(var t=0;t<tabs.length;t++){ (function(el){ el.onclick=function(){ curKind=el
 function renderCountry(iso,zh){
   curCo=iso; curNm=zh||iso; curList=[]; curKind='a';
   for(var i=0;i<CAM.length;i++){ if(CAM[i].co===iso) curList.push(CAM[i]); }
-  if(!curList.length){ setPanel(false); return; }
   pB.textContent=curNm;
+  if(!curList.length){
+    pE.textContent='暂无实时机位';
+    pL.innerHTML='<p class="intro">'+(INTRO[iso]||'这一带还没有接入实时机位，介绍还在补。')+'</p>';
+    setPanel(true);
+    return;
+  }
   drawList();
   setPanel(true);
 }
@@ -238,7 +294,7 @@ function drawList(){
   }
   var tb=pEl.querySelectorAll('.tb span');
   for(var q=0;q<tb.length;q++){ tb[q].className=(tb[q].getAttribute('data-k')===curKind)?'on':''; }
-  if(!list.length){ pE.textContent='这里没有这一类机位'; pL.innerHTML=''; return; }
+  if(!list.length){ pE.textContent='这一类暂无'; pL.innerHTML=INTRO[curCo]?('<p class="intro">'+INTRO[curCo]+'</p>'):''; return; }
   var m={};
   for(var i=0;i<list.length;i++){
     var k=list[i].c||list[i].r||'其他';
@@ -249,7 +305,7 @@ function drawList(){
   var nn=0;
   for(var i=0;i<list.length;i++){ if(list[i].k==='n') nn++; }
   pE.textContent=list.length+' 个机位'+(curKind==='a'?('，自然 '+nn):'');
-  var h='';
+  var h=INTRO[curCo]?('<p class="intro">'+INTRO[curCo]+'</p>'):'';
   for(var j=0;j<ks.length;j++){
     h+='<div class="row"><div>'+ks[j]+'</div><i>'+m[ks[j]].length+'</i></div>';
   }
