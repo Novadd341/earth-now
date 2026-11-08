@@ -37,6 +37,7 @@ html,body{height:100%;background:#02040a;overflow:hidden;
 #panel .row:last-child{border-bottom:none}
 #panel .row i{font-style:normal;color:#4e7189;font-size:11px}
 #panel .shot{width:100%;max-height:calc(42vh - 104px);object-fit:contain;border-radius:10px;display:block;background:#08131f}
+#panel .shot.fail{height:110px;line-height:110px;text-align:center;color:#6d8ba3;font-size:11px;letter-spacing:1px}
 #panel .hd{font-weight:600;color:#5ce0b8;font-size:9px;letter-spacing:.5px;margin-left:4px}
 #panel .cap{font-size:11px;color:#5a7c93;margin-top:7px;line-height:1.65}
 #panel .back{color:#79e0c6;font-size:12px;margin-bottom:7px}
@@ -324,7 +325,7 @@ function renderCity(name,list){
   for(var i=0;i<list.length;i++){ if(list[i].hd){ one=list[i]; break; } }
   pB.textContent=name;
   pE.textContent=list.length+' 个机位';
-  pL.innerHTML='<div class="back">‹ 返回城市</div><img class="shot" src="'+one.img+'"><div class="cap">'+one.t+(one.hd?' <b class="hd">HD</b>':'')+'</div>';
+  pL.innerHTML='<div class="back">‹ 返回城市</div><img class="shot" referrerpolicy="no-referrer" decoding="async" src="'+one.img+'" onerror="imgFail(this)"><div class="cap">'+one.t+(one.hd?' <b class="hd">HD</b>':'')+'</div>';
   pL.querySelector('.back').onclick=function(){ renderCountry(curCo,curNm); };
   setPanel(true);
 }
@@ -351,6 +352,12 @@ function playTick(){
     o2.connect(g2); g2.connect(_ac.destination);
     o2.start(t); o2.stop(t+0.07);
   }catch(e){}
+}
+function imgFail(el){
+  var d=document.createElement("div");
+  d.className="shot fail";
+  d.textContent="这台机位这会儿连不上";
+  el.parentNode.replaceChild(d,el);
 }
 function doPick(cx,cy){
   var nd=new THREE.Vector2(cx/innerWidth*2-1,-(cy/innerHeight)*2+1);
