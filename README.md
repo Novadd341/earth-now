@@ -26,10 +26,10 @@ https://novadd341.github.io/earth-now/
 
 | 文件 | 干什么 | 需要 key |
 | --- | --- | --- |
-| `mcp_server.py` | 机位表：按国家查、按经纬度找附近、取单张截图 | 不要 |
+| `mcp_server.py` | 机位表 + 卫星图：国家/附近/单机位/全盘云图/云动图，六工具合一 | 不要 |
 | `server.py` | NOAA GOES-19 云图：取此刻全盘、拼成动图 | 不要 |
 
-`mcp_server.py` 只读同目录的 `world_cams.json`，不发任何外部请求。
+机位查询只读同目录的 `world_cams.json`；卫星图工具实时抓 NOAA GOES-19 公开 CDN。
 
 | 工具 | 作用 |
 | --- | --- |
@@ -37,6 +37,8 @@ https://novadd341.github.io/earth-now/
 | `search_by_country` | 按国家码、中英文国名查机位，可只筛高清；查不到会按城市名兜底 |
 | `search_nearby` | 按经纬度找附近机位，带距离 |
 | `get_cam` | 取单个机位的信息和当前截图地址 |
+| `latest_cloud` | 此刻最新的 GOES-19 地球全盘云图，存到本机 |
+| `cloud_animation` | 回抓多帧卫星云图拼成 GIF，看云怎么走 |
 
 ## 安装
 
