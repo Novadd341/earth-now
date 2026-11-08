@@ -327,11 +327,35 @@ function renderCity(name,list){
   setPanel(true);
 }
 
+var _ac=null;
+function playTick(){
+  try{
+    if(!_ac) _ac=new (window.AudioContext||window.webkitAudioContext)();
+    if(_ac.state==='suspended') _ac.resume();
+    var t=_ac.currentTime;
+    var o=_ac.createOscillator(), g=_ac.createGain();
+    o.type='sine';
+    o.frequency.setValueAtTime(1520,t);
+    o.frequency.exponentialRampToValueAtTime(1120,t+0.10);
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(0.14,t+0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+0.13);
+    o.connect(g); g.connect(_ac.destination);
+    o.start(t); o.stop(t+0.15);
+    var o2=_ac.createOscillator(), g2=_ac.createGain();
+    o2.type='sine'; o2.frequency.setValueAtTime(3050,t);
+    g2.gain.setValueAtTime(0.045,t);
+    g2.gain.exponentialRampToValueAtTime(0.0001,t+0.055);
+    o2.connect(g2); g2.connect(_ac.destination);
+    o2.start(t); o2.stop(t+0.07);
+  }catch(e){}
+}
 function doPick(cx,cy){
   var nd=new THREE.Vector2(cx/innerWidth*2-1,-(cy/innerHeight)*2+1);
   ray.setFromCamera(nd,cam);
   var hits=ray.intersectObject(earth,false);
   if(!hits.length){ clearPick(); infoEl.className=''; spin=0.0011; return; }
+  playTick();
   var lp=earth.worldToLocal(hits[0].point.clone()).normalize();
   var vv=Math.acos(Math.max(-1,Math.min(1,-lp.y)))/Math.PI;
   var p=Math.atan2(lp.z,-lp.x); if(p<0) p+=Math.PI*2;
